@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaflet Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #mi_mapa { height: 2200px; width: 100%; margin: 0 auto; }
+        .custom-popup {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #deletePolygonButton {
+            position: absolute;
+            top: 140px; /* Ajusta según la posición de otros botones */
+            left: 10px;
+            z-index: 1000;
+            background-color: #f44336;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #deletePolygonButton:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .custom-popup img {
+            width: 200px; /* Imagen más grande */
+            height: auto;
+            margin-bottom: 10px;
+        }
+        .custom-popup p {
+            margin: 0;
+        }
+        .custom-popup .learn-more {
+            background-color: red;
+            color: white;
+            padding: 5px 10px;
+            text-decoration: none;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        #clearLinesButton {
+            position: absolute;
+            top: 90px;
+            left: 10px;
+            z-index: 1000;
+            background-color: red;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #redoLinesButton {
+            position: absolute;
+            top: 90px;
+            left: 120px;
+            z-index: 1000;
+            background-color: rgb(219, 156, 39);
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #colorPalette {
+            position: absolute;
+            top: 87px;
+            left: 230px;
+            z-index: 1000;
+        }
+        .colorButton {
+            width: 30px;
+            height: 30px;
+            border: none;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        #popup-form {
+            display: none; /* Oculto por defecto */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            z-index: 1001; /* Asegura que esté por encima del mapa */
+        }
+        #popup-form label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #popup-form input, #popup-form textarea {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            margin-right: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #popup-form button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #popup-form button:hover {
+            background-color: #45a049;
+        }
+        #popup-form button#cancel-form {
+            background-color: #f44336;
+        }
+        #popup-form button#cancel-form:hover {
+            background-color: #c9302c;
+        }
+        
+    </style>
+</head>
+<body>
+    <div id="mi_mapa"></div>
+    <button id="clearLinesButton">Borrar Líneas</button>
+    <button id="redoLinesButton">Rehacer Línea</button>
+    <button id="lockMapButton">🔒 Bloquear Mapa</button>
+    <button id="deletePolygonButton" disabled>🗑️ Borrar Polígono Seleccionado</button>
+    
+    <div id="colorPalette">
+        <button class="colorButton" style="background-color: red;" data-color="red"></button>
+        <button class="colorButton" style="background-color: yellow;" data-color="yellow"></button>
+        <button class="colorButton" style="background-color: blue;" data-color="blue"></button>
+    </div>
+    
+
+    <div id="popup-form">
+        <h2>Información del Lote</h2>
+        <label for="imagen">URL de la Imagen:</label><br>
+        <input type="text" id="imagen" name="imagen"><br><br>
+        <label for="precio">Precio:</label><br>
+        <input type="text" id="precio" name="precio"><br><br>
+        <label for="descripcion">Descripción:</label><br>
+        <textarea id="descripcion" name="descripcion"></textarea><br><br>
+        <label for="learn-more-url">URL "Learn More":</label><br>
+        <input type="url" id="learn-more-url" name="learn-more-url"><br><br> <button id="submit-form">Guardar</button>
+        <button id="cancel-form">Cancelar</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let polygonCoordinates = [];
+        let temporaryLine = null;
+        let polygons = [];
+        let selectedPolygon = null;
+        let selectedColor = 'red'; 
+        let drawnPolygons = [];
+        let isLocked = localStorage.getItem('isLocked') === 'true'; // Inicializar isLocked aquí
+        const contenidoPopups = [];
+        let loteCounter = parseInt(localStorage.getItem('loteCounter')) || 0;
+
+        // URL de la imagen de fondo (plano)
+        const backgroundImageUrl = "https://th.bing.com/th/id/OIP.-zkHkBtwPlT6NJZNyFGGIwHaFh?rs=1&pid=ImgDetMain"; // Cambia esta URL por la que quieras
+
+        // Coordenadas de la imagen de fondo (georreferenciadas)
+        const imageBounds = [
+        [7.112000, -73.11600], // Esquina superior izquierda (lat, lng)
+        [7.113000, -73.11500]  // Esquina inferior derecha (lat, lng)
+];
+
+
+        function updateDeleteButtonState() {
+            document.getElementById('deletePolygonButton').disabled = !selectedPolygon;
+            const deleteButton = document.getElementById('deletePolygonButton');
+            deleteButton.disabled = !selectedPolygon; // Habilitar solo si hay un polígono seleccionado y no está bloqueado
+        }
+
+        function selectPolygon(polygon) {
+            selectedPolygon = polygon;
+            updateDeleteButtonState(); // Habilitar el botón de borrar
+        }
+
+        function deleteSelectedPolygon() {
+            if (selectedPolygon && confirm("¿Estás seguro de que quieres borrar este polígono?")) {
+                map.removeLayer(selectedPolygon); // Eliminar el polígono del mapa
+                polygons = polygons.filter(p => p !== selectedPolygon); // Eliminar de la lista de polígonos
+                drawnPolygons = polygons.slice(); // Sincronizar drawnPolygons
+                savePolygons(); // Guardar cambios en localStorage
+                selectedPolygon = null; // Deseleccionar
+                updateDeleteButtonState(); // Actualizar estado del botón
+            }
+        }
+        // Evento para el botón de borrar
+        document.getElementById('deletePolygonButton').addEventListener('click', function () {
+            if (selectedPolygon && confirm("¿Estás seguro de que quieres borrar este polígono?")) {
+                map.removeLayer(selectedPolygon); // Eliminar el polígono del mapa
+                polygons = polygons.filter(p => p !== selectedPolygon); // Eliminar de la lista de polígonos
+                drawnPolygons = drawnPolygons.filter(p => p !== selectedPolygon); // Eliminar de la lista de polígonos dibujados
+                savePolygons(); // Guardar cambios en localStorage
+                selectedPolygon = null; // Deseleccionar
+                updateDeleteButtonState(); // Deshabilitar el botón de borrar
+            }
+        });
+    
+        function handleMapClick(e) {
+            polygonCoordinates.push([e.latlng.lat, e.latlng.lng]);
+        
+            if (temporaryLine) {
+                map.removeLayer(temporaryLine);
+            }
+            temporaryLine = L.polyline(polygonCoordinates, { color: selectedColor }).addTo(map);
+        
+            if (polygonCoordinates.length === 4) {
+                let polygon = L.polygon(polygonCoordinates, { color: selectedColor }).addTo(map);
+                polygons.push(polygon);
+                drawnPolygons.push(polygon);
+        
+                document.getElementById('popup-form').style.display = 'block';
+                document.getElementById('imagen').value = '';
+                document.getElementById('precio').value = '';
+                document.getElementById('descripcion').value = '';
+                
+        
+                const submitButton = document.getElementById('submit-form');
+
+                submitButton.onclick = function() {
+                    const imagen = document.getElementById('imagen').value;
+                    const precio = document.getElementById('precio').value;
+                    const descripcion = document.getElementById('descripcion').value;
+                    
+                    polygon.bindPopup(popupContent);
+                    polygon.on('click', function () {
+                        this.openPopup();
+                        selectPolygon(this);
+                    
+                    polygon.imagen = imagen;
+                    polygon.precio = precio;
+                    polygon.descripcion = descripcion;
+                    
+        
+                    });
+                updateDeleteButtonState();
+                    document.getElementById('popup-form').style.display = 'none';
+                    savePolygons();
+                    loteCounter++;
+                    polygonCoordinates = [];
+                    map.removeLayer(temporaryLine);
+                    temporaryLine = null;
+                };
+                
+        
+                document.getElementById('cancel-form').onclick = function() {
+                    document.getElementById('popup-form').style.display = 'none';
+                    map.removeLayer(polygon);
+                    polygons.pop();
+                    drawnPolygons.pop();
+                    polygonCoordinates = [];
+                    map.removeLayer(temporaryLine);
+                    temporaryLine = null;
+                };
+            }
+        }
+
+        // Variable para almacenar la capa de imagen
+        let imageOverlay;
+
+        function loadPolygons() {
+            const savedPolygons = JSON.parse(localStorage.getItem('savedPolygons')) || []; // Valor predeterminado []
+            savedPolygons.forEach(polygonData => {
+                const polygon = L.polygon(polygonData.coordinates, { color: polygonData.color }).addTo(map);
+                Object.assign(polygon, polygonData); // Asigna todas las propiedades
+                polygons.push(polygon);
+                drawnPolygons.push(polygon); // Añadir a drawnPolygons
+
+                polygon.on('click', () => {
+                    selectPolygon(polygon);
+                });
+                updateDeleteButtonState();
+                selectPolygon(polygon);
+                    
+                    // Añadir estas propiedades
+                    polygon.learnMoreUrl = polygonData.learnMoreUrl || '#';
+                    polygon.imagen = polygonData.imagen;
+                    polygon.precio = polygonData.precio;
+                    polygon.descripcion = polygonData.descripcion;
+                    polygon.learnMoreUrl = decodeURIComponent(polygonData.learnMoreUrl || '#');
+        
+
+                    let currentLote = loteCounter;
+                    let popupContent = `
+                        <div class="custom-popup">
+                            <img src="${polygonData.imagen}" alt="Tooltip Image">
+                            <p><strong>Precio:</strong> ${polygonData.precio}</p>
+                            <p><strong>Lote #:</strong> ${currentLote}</p>
+                            <p>${polygonData.descripcion}</p>
+                            <a href="${polygon.learnMoreUrl}" class="learn-more" target="_blank">LEARN MORE</a> </div>`; // Usa polygon.learnMoreUrl aquí
+
+                    polygon.bindPopup(popupContent);
+                    polygon.on('click', function () {
+                        this.openPopup();
+                    });
+
+                    loteCounter++;
+                });
+            }
+        
+
+        function savePolygons() {
+            const polygonsData = polygons.map(polygon => {
+                return {
+                    coordinates: polygon.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]),  
+                    color: polygon.options.color,
+                    imagen: polygon.imagen,
+                    precio: polygon.precio,
+                    descripcion: polygon.descripcion,
+                    learnMoreUrl: polygon.learnMoreUrl,
+
+                    ...polygon.options
+                };
+            });
+            localStorage.setItem('savedPolygons', JSON.stringify(polygonsData));
+            localStorage.setItem('loteCounter', loteCounter);
+
+            if (selectedPolygon) {
+                localStorage.setItem('selectedPolygon', JSON.stringify({
+                    coordinates: selectedPolygon.getLatLngs()[0].map(latlng => [latlng.lat, latlng.lng]),
+                    color: selectedPolygon.options.color,
+                    imagen: selectedPolygon.imagen,
+                    precio: selectedPolygon.precio,
+                    descripcion: selectedPolygon.descripcion,
+                    learnMoreUrl: selectedPolygon.learnMoreUrl,
+                    ...selectedPolygon.options
+                }));
+            } else {
+                localStorage.removeItem('selectedPolygon');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // AQUI TIENES QUE EDITAR LAS COORDENADAS DE LA IMAGEN DE FONDO 
+            map = L.map('mi_mapa').setView([7.109021, -73.115768], 18);
+
+
+            // Añadir la imagen de fondo georreferenciada
+            imageOverlay = L.imageOverlay(backgroundImageUrl, imageBounds, {
+                interactive: true,
+                attribution: 'Mi plano',
+            }).addTo(map);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            loadPolygons();
+
+            document.querySelectorAll('.colorButton').forEach(button => {
+                button.addEventListener('click', function () {
+                    selectedColor = this.getAttribute('data-color');
+                });
+            });
+
+            map.on('click', function (e) {
+                polygonCoordinates.push([e.latlng.lat, e.latlng.lng]);
+
+                if (selectedPolygon && !selectedPolygon.getBounds().contains(e.latlng)) {
+                    selectPolygon(null);
+                    return;
+                }
+                 // Selección de polígonos
+                let clickedPolygon = null;
+                polygons.forEach(polygon => {
+                    if (polygon.getBounds().contains(e.latlng)) {
+                        clickedPolygon = polygon;
+                        return;
+                    }
+                });
+
+                if (clickedPolygon) {
+                    selectPolygon(clickedPolygon);
+    }
+
+                if (temporaryLine) {
+                    map.removeLayer(temporaryLine);
+                }
+                temporaryLine = L.polyline(polygonCoordinates, { color: selectedColor }).addTo(map);
+
+                if (polygonCoordinates.length === 6) {
+                    let polygon = L.polygon(polygonCoordinates, { color: selectedColor }).addTo(map);
+                    polygons.push(polygon);
+                    drawnPolygons.push(polygon); // Añadir a drawnPolygons
+                    savePolygons();
+                    polygonCoordinates = []; // Reiniciar coordenadas
+                    map.removeLayer(temporaryLine); // Eliminar la línea temporal
+                    temporaryLine = null;
+
+                    polygon.on('click', function () {
+                        selectPolygon(polygon);
+                    });
+
+                    document.getElementById('popup-form').style.display = 'block';
+                    document.getElementById('imagen').value = '';
+                    document.getElementById('precio').value = '';
+                    document.getElementById('descripcion').value = '';
+
+                    const submitButton = document.getElementById('submit-form');
+
+                    submitButton.onclick = function() {
+                        const imagen = document.getElementById('imagen').value;
+                        const precio = document.getElementById('precio').value;
+                        const descripcion = document.getElementById('descripcion').value;
+                        const learnMoreInput = document.getElementById('learn-more-url');
+                        const learnMoreUrl = learnMoreInput.value.trim();
+                        
+                        const polygonData = polygons.find(polygon => polygon.learnMoreUrl === learnMoreUrl);
+
+                        if (!learnMoreUrl) {
+                            alert("Por favor, ingresa un enlace válido.");
+                            return;
+                        }
+
+                        let finalUrl = learnMoreUrl;
+                        if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+                            finalUrl = `http://${finalUrl}`;
+                        }
+
+                        // Codificar solo una vez
+                        polygon.learnMoreUrl = encodeURIComponent(finalUrl);
+                        polygon.imagen = imagen;
+                        polygon.precio = precio;
+                        polygon.descripcion = descripcion;
+
+                        let popupContent = `
+                            <div class="custom-popup">
+                                <img src="${imagen}" alt="Tooltip Image">
+                                <p><strong>Precio:</strong> ${precio}</p>
+                                <p><strong>Lote #:</strong> ${loteCounter}</p>
+                                <p>${descripcion}</p>
+                                <a href="${decodeURIComponent(polygon.learnMoreUrl)}" 
+                                class="learn-more" 
+                                target="_blank" 
+                                rel="noopener noreferrer">
+                                    LEARN MORE</a> </div>`; // Usa polygon.learnMoreUrl aquí
+
+                        polygon.bindPopup(popupContent);
+                        polygon.on('click', function () {
+                            this.openPopup();
+                        });
+
+                        document.getElementById('popup-form').style.display = 'none';
+                        savePolygons();
+                        loteCounter++;
+                        polygonCoordinates = [];
+                        map.removeLayer(temporaryLine);
+                        temporaryLine = null;
+                    };
+
+                    document.getElementById('cancel-form').onclick = function() {
+                        document.getElementById('popup-form').style.display = 'none';
+                        map.removeLayer(polygon);
+                        polygons.pop();
+                        drawnPolygons.pop();
+                        polygonCoordinates = [];
+                        map.removeLayer(temporaryLine);
+                        temporaryLine = null;
+                    };
+                }
+
+                if (polygon) { 
+                    map.removeLayer(polygon);
+                }
+
+                if (clickedPolygon) {
+                    selectPolygon(clickedPolygon);
+                } else {
+                    selectedPolygon = (null);
+                    updateDeleteButtonState();
+                }
+            });
+                // Verificar si el clic fue en un polígono
+                const clickedPolygon = polygons.find(polygon => {
+                    const bounds = polygon.getBounds();
+                    return bounds.contains(e.latlng);
+                });
+
+                if (clickedPolygon) {
+                    selectPolygon(clickedPolygon);
+                } else {
+                    selectedPolygon = (null);
+                    updateDeleteButtonState(); // Deshabilitar el botón de borrar
+                }
+                if (!selectedPolygon) return;
+
+                const bounds = selectedPolygon.getBounds();
+                if (!bounds.contains(e.latlng)) {
+                    selectedPolygon = null; // Deseleccionar
+                    updateDeleteButtonState(); // Deshabilitar el botón de borrar
+                }
+            });
+
+            document.getElementById('clearLinesButton').addEventListener('click', function () {
+                if (confirm("¿Estás seguro de que quieres borrar todos los polígonos?")) {
+                    polygons.forEach(polygon => map.removeLayer(polygon));
+                    polygons = [];
+                    drawnPolygons = [];
+                    localStorage.removeItem('savedPolygons');
+                    localStorage.removeItem('loteCounter');
+                    loteCounter = 0;
+                    savePolygons(); // Guardar cambios en localStorage
+                }
+            });
+
+            document.getElementById('redoLinesButton').addEventListener('click', function () {
+                if (drawnPolygons.length > 0) {
+                    let lastPolygon = drawnPolygons.pop();
+                    map.removeLayer(lastPolygon);
+
+                    let savedPolygons = JSON.parse(localStorage.getItem('savedPolygons'));
+                    if (savedPolygons && savedPolygons.length > 0) {
+                        savedPolygons.pop();
+                        localStorage.setItem('savedPolygons', JSON.stringify(savedPolygons));
+                    }
+                }
+                savePolygons();
+            });
+    </script>
+</body>
+</html>

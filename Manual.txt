@@ -1,0 +1,148 @@
+**Manual de Usuario: Mapa Interactivo de Lotes**
+
+¡Bienvenido al mapa interactivo de lotes! Este manual te guiará a través de las funciones del mapa y te explicará cómo personalizarlo para que se ajuste a tus necesidades.
+
+**1. Explorando el Mapa**
+
+*   **Mover el mapa:** Haz clic y arrastra el mapa para desplazarte por la zona.
+*   **Zoom:** Utiliza la rueda del ratón o los botones "+" y "-" en el mapa para acercarte o alejarte.
+
+**2. Dibujando Polígonos**
+
+Para dibujar un polígono (que representa un lote), sigue estos pasos:
+
+1.  **Selecciona un color:** Haz clic en uno de los botones de colores en la paleta de colores (rojo, amarillo, azul) para elegir el color del polígono.
+2.  **Haz clic en el mapa:** Haz clic en el mapa en los puntos donde quieres que estén los vértices del polígono. Para dibujar un cuadrilátero (5 lados), necesitarás hacer 5 clics(esto se puede ajustar dentro del código  tu gusto). Para polígonos de más lados, haz clic la cantidad de veces necesarias hasta completar el polígono.
+3.  **Completa el polígono:** Después del último clic, se creará el polígono y aparecerá un formulario emergente.
+
+**3. Formulario de Información del Lote**
+
+El formulario emergente te permite añadir información a cada lote:
+
+*   **URL de la Imagen:** Introduce la URL de una imagen que represente el lote. Esta imagen se mostrará en el tooltip del polígono.
+*   **Precio:** Introduce el precio del lote.
+*   **Descripción:** Introduce una descripción del lote (características, tamaño, etc.).
+*   **URL "Learn More":** Introduce una URL con más información sobre el lote. Este enlace se mostrará en el tooltip del polígono.
+
+Haz clic en "Guardar" para guardar la información y cerrar el formulario. Si haces clic en "Cancelar", se borrará el polígono que estabas dibujando.
+
+**4. Tooltips**
+
+Cuando hagas clic en un polígono, aparecerá un tooltip con la información del lote:
+
+*   **Imagen:** Se mostrará la imagen del lote.
+*   **Precio:** Se mostrará el precio del lote.
+*   **Descripción:** Se mostrará la descripción del lote.
+*   **Enlace "Learn More":** Un enlace que te llevará a la página con más información sobre el lote.
+
+**5. Botones de Control**
+
+*   **Borrar Líneas:** Borra todos los polígonos dibujados en el mapa.
+*   **Rehacer Línea:** Borra el último polígono dibujado.
+*   **Bloquear Mapa:** Bloquea la edición del mapa (no se podrán dibujar nuevos polígonos ni modificar los existentes) y oculta los botones de control y la paleta de colores.
+*   **Borrar Polígono Seleccionado:** Borra el polígono que has seleccionado haciendo clic sobre él. Este botón solo estará habilitado cuando hayas seleccionado un polígono.
+
+**6. Paleta de Colores**
+
+La paleta de colores te permite elegir el color de los nuevos polígonos que dibujes.
+
+**7. Personalización del Mapa (Coordenadas y Plano)**
+
+Para personalizar el mapa, necesitarás editar el código HTML del archivo. **¡No te preocupes, es sencillo!**
+
+1.  **Accede al código HTML:** Abre el archivo HTML del mapa con un editor de texto (como Notepad, Sublime Text, VS Code, etc.).
+
+2.  **Modifica las coordenadas:** Busca la línea que dice:
+
+    
+    map = L.map('mi_mapa').setView([25.77072, -80.19693], 20);
+    
+
+    Reemplaza `[25.77072, -80.19693]` con las coordenadas de latitud y longitud del centro de tu mapa. El número `20` es el nivel de zoom inicial. Puedes ajustarlo según necesites.
+
+
+Una vez que hayas modificado las coordenadas, guarda el archivo HTML.
+
+3.  **Modifica el plano de fondo:** Busca la línea que dice:
+
+    
+    const backgroundImageUrl = ""; 
+    
+
+   Reemplaza las comillas vacías "" con la URL de la imagen del plano que quieres usar.
+ 
+4. Modifica las coordenadas del plano: Busca las líneas que dicen:
+
+const imageBounds = [
+    [25.77072, -80.19693], // Esquina superior izquierda (lat, lng)
+    [25.77572, -80.19193]  // Esquina inferior derecha (lat, lng)
+];
+
+Reemplaza [25.77072, -80.19693] y [25.77572, -80.19193] con las coordenadas de latitud y longitud de las esquinas superior izquierda e inferior derecha de tu plano. ¡Importante! Estas coordenadas deben corresponder a la ubicación real de la imagen en el mapa.
+
+5.  **Guarda los cambios:** Guarda el archivo HTML.
+
+**8. Subiendo el Mapa a tu Hosting e integrando con WordPress**
+
+1.  **Accede a tu hosting:** Utiliza un cliente FTP (como FileZilla) o el panel de control de tu hosting para acceder a los archivos de tu sitio web.
+
+2.  **Sube los archivos:** Sube el archivo HTML a la carpeta correspondiente de tu hosting (normalmente la carpeta `public_html`).
+
+3.  **Obtén la URL del archivo HTML:** Una vez subido el archivo, obtén la URL del mismo. Esta URL la necesitarás para el siguiente paso.
+
+4.  **Integra el mapa en WordPress usando un iframe:**
+
+    *   En el editor de WordPress, ve a la página donde quieres insertar el mapa.
+    *   Añade un bloque de "HTML personalizado".
+    *   Dentro del bloque HTML, pega el siguiente código, reemplazando `URL_DEL_ARCHIVO_HTML` con la URL del archivo que subiste:
+
+    
+    <iframe src="URL_DEL_ARCHIVO_HTML" width="100%" height="600px"></iframe>
+    
+
+    *   Ajusta el ancho escribiendo (`width`) y la altura (`height`) del iframe según necesites.
+
+5.  **Guarda los cambios:** Guarda o publica la página de WordPress.
+
+**9. Bloqueando el Mapa (Modo de Solo Lectura)**
+
+Una vez que hayas terminado de dibujar los polígonos y personalizar el mapa, puedes bloquearlo para evitar modificaciones. Para ello, sigue estos pasos:
+
+1.  **Edita el archivo HTML:** Abre el archivo HTML con un editor de texto.
+
+2.  **Pega el código de bloqueo:** Busca esta linea(Recuerda que puedes facilitar la búsqueda con ctrl f):
+
+   "// AQUI TIENES QUE PONER EL CODIGO DE BLOQUEO👇
+
+            
+            
+   // AQUI TIENES QUE PONER EL CODIGO DE BLOQUEO ☝️"
+
+    Dentro de esta función (después de `loadPolygons()` y antes del cierre de la función), pega el siguiente código:
+
+   
+    if (isLocked) {
+        lockMapProgrammatically();
+    }
+
+    function lockMapProgrammatically() {
+        map.off('click', handleMapClick); // Deshabilitar el evento click para dibujar
+
+        document.getElementById('clearLinesButton').style.display = 'none';
+        document.getElementById('redoLinesButton').style.display = 'none';
+        document.getElementById('deletePolygonButton').style.display = 'none';
+        document.getElementById('colorPalette').style.display = 'none';
+        document.getElementById('lockMapButton').style.display = 'none'; // Ocultar el botón "Bloquear Mapa" también
+
+        localStorage.setItem('isLocked', 'true');
+    }
+    
+
+3.  **Guarda los cambios:** Guarda el archivo HTML.
+
+Con este código, el mapa se bloqueará automáticamente cuando se cargue la página, impidiendo que se dibujen nuevos polígonos y ocultando los botones de edición.
+
+10. Facilita la búsqueda de código con Ctrl + F
+
+Para encontrar rápidamente las secciones de código que necesitas modificar (coordenadas, URL del plano, etc.), utiliza la función de búsqueda de tu editor de texto. Presiona Ctrl + F (o Cmd + F en Mac) para abrir el cuadro de búsqueda e introduce la palabra clave que deseas encontrar (por ejemplo, "coordenadas", "backgroundImageUrl", "imageBounds"). El editor resaltará todas las coincidencias, lo que te permitirá navegar rápidamente a las partes relevantes del código.
+
